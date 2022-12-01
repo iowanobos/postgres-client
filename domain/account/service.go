@@ -54,7 +54,7 @@ func (s *Service) Test(ctx context.Context) error {
 		return err
 	}
 
-	accounts, err := s.repository.List(ctx, pq.NewListQuery(nil))
+	accounts, err := s.repository.List(ctx, pq.NewListQuery(nil).AddSort("name", true).WithIteration(pq.Pagination{Number: 1, Size: 3}))
 	if err != nil {
 		logrus.WithError(err).Error("get account list failed")
 		return err

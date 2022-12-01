@@ -6,8 +6,6 @@ type ListQuery struct {
 	Filter    squirrel.Sqlizer
 	iteration iteration
 	sorts     []sort
-	// define if you want to return specific fields
-	projection []string
 }
 
 func NewListQuery(filter squirrel.Sqlizer) *ListQuery {
@@ -19,14 +17,14 @@ func (q *ListQuery) WithIteration(value iteration) *ListQuery {
 	return q
 }
 
-func (q *ListQuery) AddSort(value sort) *ListQuery {
-	q.sorts = append(q.sorts, value)
+func (q *ListQuery) AddSort(field string, isDesc bool) *ListQuery {
+	q.sorts = append(q.sorts, sort{field, isDesc})
 	return q
 }
 
-func (q *ListQuery) WithProjection(columns ...string) *ListQuery {
-	q.projection = columns
-	return q
+func (q *ListQuery) ApplyAll(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
+	builder = q.ApplyIteration(builder)
+	return q.ApplySort(builder)
 }
 
 func (q *ListQuery) ApplyIteration(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
@@ -42,13 +40,13 @@ func (q *ListQuery) ApplySort(builder squirrel.SelectBuilder) squirrel.SelectBui
 	}
 
 	orderBys := make([]string, len(q.sorts))
-	for _, v := range q.sorts {
+	for i, v := range q.sorts {
 		order := "asc"
 		if v.IsDescOrder {
 			order = "desc"
 		}
 
-		orderBys = append(orderBys, v.Field+" "+order)
+		orderBys[i] = v.Field + " " + order
 	}
 
 	return builder.OrderBy(orderBys...)

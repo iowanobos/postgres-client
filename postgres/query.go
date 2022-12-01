@@ -9,8 +9,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// QueryManager handles queries
 type QueryManager interface {
-	Select(ctx context.Context, builder squirrel.SelectBuilder) (pgx.Rows, error)
+	Select(ctx context.Context, dest any, builder squirrel.SelectBuilder) error
 	Insert(ctx context.Context, builder squirrel.InsertBuilder) (int64, error)
 	Update(ctx context.Context, builder squirrel.UpdateBuilder) (int64, error)
 	Delete(ctx context.Context, builder squirrel.DeleteBuilder) (int64, error)
@@ -21,16 +22,23 @@ type queryManager struct {
 	pool *pgxpool.Pool
 }
 
-func (c *queryManager) Select(ctx context.Context, builder squirrel.SelectBuilder) (pgx.Rows, error) {
-	query, args, err := builder.ToSql()
+func (c *queryManager) Select(ctx context.Context, dest any, builder squirrel.SelectBuilder) error {
+	s, err := newScanner(dest)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if tx := txFromCtx(ctx); tx != nil {
-		return tx.Query(ctx, query, args...)
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return err
 	}
-	return c.pool.Query(ctx, query, args...)
+
+	rows, err := c.Query(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	return s.scan(rows)
 }
 
 func (c *queryManager) Insert(ctx context.Context, builder squirrel.InsertBuilder) (int64, error) {

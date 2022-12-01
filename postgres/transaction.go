@@ -35,7 +35,7 @@ func (c *transactionManager) BeginTx(ctx context.Context) (context.Context, erro
 func (c *transactionManager) CommitTx(ctx context.Context) error {
 	tx := txFromCtx(ctx)
 	if tx == nil {
-		return nil // TODO: если нет транзакции в контексте то ничего не делаю?
+		return nil // TODO: если нет транзакции в контексте то ничего не делаю
 	}
 
 	return tx.Commit(ctx)
@@ -44,7 +44,7 @@ func (c *transactionManager) CommitTx(ctx context.Context) error {
 func (c *transactionManager) Rollback(ctx context.Context) error {
 	tx := txFromCtx(ctx)
 	if tx == nil {
-		return nil // TODO: если нет транзакции в контексте то ничего не делаю?
+		return nil // TODO: если нет транзакции в контексте то ничего не делаю
 	}
 
 	return tx.Rollback(ctx)

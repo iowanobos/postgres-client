@@ -24,36 +24,25 @@ func NewRepository(client *postgres.Client) Repository {
 }
 
 func (r *repository) List(ctx context.Context, query *pq.ListQuery) (*pq.ListResult[Account], error) {
-	itemsQb := r.listQueryBuilder(query.Filter, "id", "name")
-	itemsQb = query.ApplyIteration(itemsQb)
-	itemsQb = query.ApplySort(itemsQb)
-	res, err := r.query.Select(ctx, itemsQb)
-	if err != nil {
-		return nil, err
-	}
+	list := new(pq.ListResult[Account])
 
-	items, err := postgres.RowsScanStruct[Account](res)
-	if err != nil {
+	itemsQb := r.listQueryBuilder(query.Filter, "id", "name")
+	itemsQb = query.ApplyAll(itemsQb)
+
+	if err := r.query.Select(ctx, &list.Items, itemsQb); err != nil {
 		return nil, err
 	}
 
 	countQb := r.listQueryBuilder(query.Filter, "count(*)")
-	res, err = r.query.Select(ctx, countQb)
-	if err != nil {
+	var count []int64
+	if err := r.query.Select(ctx, &count, countQb); err != nil {
 		return nil, err
 	}
-
-	var totalCount int64
-	for res.Next() {
-		if err = res.Scan(&totalCount); err != nil {
-			return nil, err
-		}
+	if len(count) > 0 {
+		list.TotalCount = count[0]
 	}
 
-	return &pq.ListResult[Account]{
-		Items:      items,
-		TotalCount: totalCount,
-	}, nil
+	return list, nil
 }
 
 func (r *repository) listQueryBuilder(filter squirrel.Sqlizer, columns ...string) squirrel.SelectBuilder {
